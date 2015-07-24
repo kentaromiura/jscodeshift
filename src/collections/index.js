@@ -10,6 +10,7 @@
 
 module.exports = {
   Node: require('./Node'),
+  Module: require('./Module'),
   JSXElement: require('./JSXElement'),
   VariableDeclarator: require('./VariableDeclarator'),
 };

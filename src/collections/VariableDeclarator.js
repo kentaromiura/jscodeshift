@@ -10,84 +10,58 @@
 
 'use strict';
 
-var _ = require('lodash');
-var Collection = require('../Collection');
-var NodeCollection = require('./Node');
-var matchNode = require('../matchNode');
-var recast = require('recast');
+const _ = require('lodash');
+const Collection = require('../Collection');
+const Node = require('./Node');
+const recast = require('recast');
 
-var astNodesAreEquivalent = recast.types.astNodesAreEquivalent;
-var b = recast.types.builders;
-var types = recast.types.namedTypes;
+const b = recast.types.builders;
+const {
+  Identifier,
+  MemberExpression,
+  VariableDeclarator,
+} = recast.types.namedTypes;
 
-var VariableDeclarator = recast.types.namedTypes.VariableDeclarator;
-
-var globalMethods = {
+const globalMethods = {
   /**
    * Finds all variable declarators, optionally filtered by name.
    *
    * @param {string} name
    * @return {Collection}
    */
-  findVariableDeclarators: function(name) {
-    var filter = name ? {id: {name: name}} : null;
+  findVariableDeclarators(name) {
+    const filter = name ? {id: {name: name}} : null;
     return this.find(VariableDeclarator, filter);
   }
 };
 
-
-var filterMethods = {
-  /**
-   * Returns a function that returns true if the provided path is a variable
-   * declarator and requires one of the specified module names.
-   *
-   * @param {string|Array} names A module name or an array of module names
-   * @return {Function}
-   */
-  requiresModule: function(names) {
-    if (names && !Array.isArray(names)) {
-      names = [names];
-    }
-    var requireIdentifier = b.identifier('require');
-    return function(path) {
-      var node = path.value;
-      if (!VariableDeclarator.check(node) ||
-          !types.CallExpression.check(node.init) ||
-          !astNodesAreEquivalent(node.init.callee, requireIdentifier)) {
-        return false;
-      }
-      return !names ||
-        names.some(
-          n => astNodesAreEquivalent(node.init.arguments[0], b.literal(n))
-        );
-    };
-  }
-};
-
-var transformMethods = {
+const transformMethods = {
   /**
    * Renames a variable and all its occurrences.
    *
    * @param {string} newName
    * @return {Collection}
    */
-  renameTo: function(newName) {
+  renameTo(newName) {
     // TODO: Include JSXElements
-    return this.forEach(function(path) {
-      var node = path.value;
-      var oldName = node.id.name;
-      var rootScope = path.scope;
-      var rootPath = rootScope.path;
+    return this.forEach(path => {
+      const node = path.value;
+      const oldName = node.id.name;
+      const rootScope = path.scope;
+      const rootPath = rootScope.path;
       Collection.fromPaths([rootPath])
-        .find(types.Identifier, {name: oldName})
-        .filter(function(path) { // ignore properties in MemberExpressions
-          var parent = path.parent.node;
-          return !types.MemberExpression.check(parent) ||
-            parent.property !== path.node ||
-            !parent.computed;
+        .find(Identifier, {name: oldName})
+        // ignore properties in MemberExpressions
+        .filter(path => {
+          const node = path.parent.node;
+          return (
+            !MemberExpression.check(node) ||
+            node.property !== path.node ||
+            !node.computed
+          );
         })
-        .forEach(function(path) {
-          var scope = path.scope;
+        .forEach(path => {
+          var {scope} = path;
           while (scope && scope !== rootScope) {
             if (scope.declares(oldName)) {
               return;
@@ -102,12 +76,10 @@ var transformMethods = {
   }
 };
 
-
 function register() {
-  NodeCollection.register();
+  Node.register();
   Collection.registerMethods(globalMethods);
   Collection.registerMethods(transformMethods, VariableDeclarator);
 }
 
 exports.register = _.once(register);
-exports.filters = filterMethods;

@@ -21,18 +21,22 @@ var b = recast.types.builders;
 describe('VariableDeclarators', function() {
   var nodes;
   var Collection;
+  var Module;
   var VariableDeclaratorCollection;
 
   beforeEach(function() {
     Collection = require('../../Collection');
-    VariableDeclaratorCollection =  require('../VariableDeclarator');
+    Module = require('../Module');
+    VariableDeclaratorCollection = require('../VariableDeclarator');
     VariableDeclaratorCollection.register();
 
     nodes = [recast.parse([
       'var foo = 42;',
       'var bar = require("module");',
       'var baz = require("module2");',
+      'var y;',
       'function func() {',
+      '  y = require("module3");',
       '  var x = bar;',
       '  bar.someMethod();',
       '  func1(bar);',
@@ -54,7 +58,7 @@ describe('VariableDeclarators', function() {
     it('finds all variable declarators', function() {
       var declarators = Collection.fromNodes(nodes).findVariableDeclarators();
       expect(declarators.getTypes()).toContain('VariableDeclarator');
-      expect(declarators.size()).toBe(5);
+      expect(declarators.size()).toBe(6);
     });
 
     it('finds variable declarators by name', function() {
@@ -64,39 +68,11 @@ describe('VariableDeclarators', function() {
     });
   });
 
-  describe('Filters', function() {
-    it('finds module imports (require)', function() {
-      var declarators = Collection.fromNodes(nodes)
-        .findVariableDeclarators()
-        .filter(VariableDeclaratorCollection.filters.requiresModule());
-
-      expect(declarators.size()).toBe(2);
-    });
-
-    it('finds module imports (require) by module name', function() {
-      var declarators = Collection.fromNodes(nodes)
-        .findVariableDeclarators()
-        .filter(VariableDeclaratorCollection.filters.requiresModule('module'));
-
-      expect(declarators.size()).toBe(1);
-    });
-
-    it('accepts multiple module names', function() {
-      var declarators = Collection.fromNodes(nodes)
-        .findVariableDeclarators()
-        .filter(VariableDeclaratorCollection.filters.requiresModule(
-          ['module', 'module2']
-        ));
-
-      expect(declarators.size()).toBe(2);
-    });
-  });
-
   describe('Transform', function() {
     it('renames variable declarations considering scope', function() {
       var declarators = Collection.fromNodes(nodes)
         .findVariableDeclarators()
-        .filter(VariableDeclaratorCollection.filters.requiresModule('module'))
+        .filter(Module.filters.requiresModule('module'))
         .renameTo('xyz');
 
       var identifiers =

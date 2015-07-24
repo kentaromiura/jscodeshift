@@ -16,7 +16,7 @@ var NodeCollection = require('./Node');
 
 var assert = require('assert');
 var recast = require('recast');
-var requiresModule = require('./VariableDeclarator').filters.requiresModule;
+var requiresModule = require('./Module').filters.requiresModule;
 
 var types = recast.types.namedTypes;
 var JSXElement = types.JSXElement;
